@@ -1,0 +1,367 @@
+{
+    "fuses": [
+        {
+            "brand": "Littelfuse Inc",
+            "model": "0999030.ZXN",
+            "vdc_max": 58,
+            "a_max": 30,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 3.32,
+            "link": ""
+        },
+        {
+            "brand": "ESKA",
+            "model": "340027-80V",
+            "vdc_max": 80,
+            "a_max": 30,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 3.21,
+            "link": ""
+        },
+        {
+            "brand": "Littelfuse Inc",
+            "model": "0HEV030.ZXISO",
+            "vdc_max": 450,
+            "a_max": 30,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 24.35,
+            "link": ""
+        },
+        {
+            "brand": "HELLA",
+            "model": "8JS 742 901-051",
+            "vdc_max": 150,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 5.33,
+            "link": ""
+        },
+        {
+            "brand": "Littelfuse Inc",
+            "model": "142.5631.6102",
+            "vdc_max": 58,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 3.69,
+            "link": ""
+        },
+        {
+            "brand": "Littelfuse Inc",
+            "model": "153.5631.6151",
+            "vdc_max": 32,
+            "a_max": 150,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 3.94,
+            "link": ""
+        },
+        {
+            "brand": "Cfriend",
+            "model": "EVAE-300A",
+            "vdc_max": 125,
+            "a_max": 300,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 36.6,
+            "link": ""
+        },
+        {
+            "brand": "Cfriend",
+            "model": "EVAE-350A",
+            "vdc_max": 125,
+            "a_max": 350,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 38,
+            "link": ""
+        },
+        {
+            "brand": "Cfriend",
+            "model": "EVAE-400A",
+            "vdc_max": 125,
+            "a_max": 400,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 40,
+            "link": ""
+        },
+        {
+            "brand": "Cfriend",
+            "model": "Example",
+            "vdc_max": 125,
+            "a_max": 1000,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 40,
+            "link": "www.bestlink.com"
+        }
+    ],
+    "relays": [
+        {
+            "brand": "OZSSLJJ",
+            "model": "RL/180",
+            "vdc_max": 72,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 47,
+            "link": ""
+        },
+        {
+            "brand": "Sensata",
+            "model": "D1D100",
+            "vdc_max": 100,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 159,
+            "link": ""
+        },
+        {
+            "brand": "Innuovo",
+            "model": "INVE01-200",
+            "vdc_max": 450,
+            "a_max": 200,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 36.36,
+            "link": ""
+        },
+        {
+            "brand": "Innuovo",
+            "model": "Placeholder",
+            "vdc_max": 450,
+            "a_max": 2000,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 36.36,
+            "link": ""
+        }
+    ],
+    "cables": [
+        {
+            "brand": "feked",
+            "model": "Single Core Electric Wire Cable",
+            "section": 2,
+            "vdc_max": 12,
+            "a_max": 17.5,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 1,
+            "link": ""
+        },
+        {
+            "brand": "TLC",
+            "model": "6491X 1.5mm\u00b2",
+            "section": 1.5,
+            "vdc_max": 15,
+            "a_max": 17,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 0.19,
+            "link": ""
+        },
+        {
+            "brand": "TLC",
+            "model": "6491X 2.5mm\u00b2",
+            "section": 2.5,
+            "vdc_max": 24,
+            "a_max": 24,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 0.28,
+            "link": ""
+        },
+        {
+            "brand": "TLC",
+            "model": "6491X 4mm\u00b2",
+            "section": 4,
+            "vdc_max": 32,
+            "a_max": 32,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 0.44,
+            "link": ""
+        },
+        {
+            "brand": "Solar Shop",
+            "model": "SCBAC00662",
+            "section": 6,
+            "vdc_max": 120,
+            "a_max": 62,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 1.87,
+            "link": ""
+        },
+        {
+            "brand": "MidSummer",
+            "model": "Solar PV Cable",
+            "section": 10,
+            "vdc_max": 1000,
+            "a_max": 80,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 2.18,
+            "link": ""
+        },
+        {
+            "brand": "Split Charge",
+            "model": "Hi-Flex Battery Cable 16mm\u00b2",
+            "section": 16,
+            "vdc_max": 1000,
+            "a_max": 110,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 3.3,
+            "link": ""
+        },
+        {
+            "brand": "SplitCharge",
+            "model": "Hi-Flex Battery Cable 20mm\u00b2",
+            "section": 20,
+            "vdc_max": 1000,
+            "a_max": 135,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 3.93,
+            "link": ""
+        },
+        {
+            "brand": "SplitCharge",
+            "model": "Placeholder",
+            "section": 100,
+            "vdc_max": 1000,
+            "a_max": 1305,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 3.93,
+            "link": "www.link.com"
+        }
+    ],
+    "bms": [
+        {
+            "brand": "Sensata",
+            "model": "c-BMS",
+            "max_cells": 24,
+            "vdc_min": 11,
+            "vdc_max": 120,
+            "a_max": 2000,
+            "temp_min": -40,
+            "temp_max": 125,
+            "master_price": 800,
+            "slave_price": 0,
+            "link": ""
+        },
+        {
+            "brand": "Sensata",
+            "model": "n-BMS",
+            "max_cells": 384,
+            "vdc_min": 12,
+            "vdc_max": 1000,
+            "a_max": 5000,
+            "temp_min": -40,
+            "temp_max": 125,
+            "master_price": 1000,
+            "slave_price": 200,
+            "link": ""
+        }
+    ],
+    "shunts": [
+        {
+            "brand": "Isabellenhuette",
+            "model": "IVT-S-100",
+            "vdc_max": 1000,
+            "a_max": 120,
+            "temp_min": -40,
+            "temp_max": 105,
+            "price": 380.7,
+            "link": ""
+        },
+        {
+            "brand": "Isabellenhuette",
+            "model": "IVT-S-300",
+            "vdc_max": 1000,
+            "a_max": 320,
+            "temp_min": -40,
+            "temp_max": 105,
+            "price": 378.08,
+            "link": ""
+        },
+        {
+            "brand": "Isabellenhuette",
+            "model": "IVT-S-500",
+            "vdc_max": 1000,
+            "a_max": 730,
+            "temp_min": -40,
+            "temp_max": 105,
+            "price": 388.04,
+            "link": ""
+        },
+        {
+            "brand": "Isabellenhuette",
+            "model": "IVT-S-1000",
+            "vdc_max": 1000,
+            "a_max": 1100,
+            "temp_min": -40,
+            "temp_max": 105,
+            "price": 392.02,
+            "link": ""
+        },
+        {
+            "brand": "Isabellenhuette",
+            "model": "IVT-S-2500",
+            "vdc_max": 1000,
+            "a_max": 2700,
+            "temp_min": -40,
+            "temp_max": 105,
+            "price": 405.88,
+            "link": ""
+        },
+        {
+            "brand": "Riedon",
+            "model": "SSA-2-100A",
+            "vdc_max": 1500,
+            "a_max": 200,
+            "temp_min": -40,
+            "temp_max": 115,
+            "price": 82.42,
+            "link": ""
+        },
+        {
+            "brand": "Riedon",
+            "model": "SSA-2-250A",
+            "vdc_max": 1500,
+            "a_max": 500,
+            "temp_min": -40,
+            "temp_max": 115,
+            "price": 85.64,
+            "link": ""
+        },
+        {
+            "brand": "Riedon",
+            "model": "SSA-2-500A",
+            "vdc_max": 1500,
+            "a_max": 1000,
+            "temp_min": -40,
+            "temp_max": 115,
+            "price": 89.34,
+            "link": ""
+        },
+        {
+            "brand": "Riedon",
+            "model": "SSA-2-1000A",
+            "vdc_max": 1500,
+            "a_max": 2000,
+            "temp_min": -40,
+            "temp_max": 115,
+            "price": 93.2,
+            "link": ""
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1. Carregar o ficheiro CSV
+file_name = 'Peak_shaving_Profile.csv'
+df = pd.read_csv(file_name)
+
+# 2. Selecionar os primeiros 8 campos (colunas)
+cols_to_plot = df.columns[:8]
+
+# 3. Configurar a figura com subplots (4 linhas e 2 colunas)
+fig, axes = plt.subplots(nrows=4, ncols=2, figsize=(15, 20))
+axes = axes.flatten()  # Transformar a matriz de eixos numa lista simples
+
+# 4. Iterar sobre as colunas e criar os gráficos
+for i, col in enumerate(cols_to_plot):
+    axes[i].plot(df[col], color='tab:blue', linewidth=1)
+    axes[i].set_title(f'Campo: {col}', fontsize=14, fontweight='bold')
+    axes[i].set_xlabel('Index / Amostra')
+    axes[i].set_ylabel('Valor')
+    axes[i].grid(True, linestyle='--', alpha=0.7)
+
+# Ajustar o layout para evitar sobreposições
+plt.tight_layout()
+
+# 5. Guardar e mostrar o gráfico
+plt.savefig('visualizacao_perfis.png')
+# plt.show() # Descomentar se estiver a correr localmente
