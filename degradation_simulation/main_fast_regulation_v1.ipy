@@ -1,0 +1,356 @@
+# %% Imports
+
+import numpy as np
+import pandas as pd
+import sys
+sys.path.append('/home/duarte/Desktop/PeakStone/Multichemistry/mpc_251227')
+from load_data import load_cell_data, load_energy_data_household, load_energy_data_fast_regulation
+
+
+
+def get_battery_parameters(n_cells: dict, cells_df: pd.DataFrame) -> pd.DataFrame:
+    # Copiar para não alterar o DataFrame original
+    bat_df = cells_df.copy()
+
+    # Inicializar colunas
+    bat_df["n_cells"] = 0
+    bat_df["P_dis_max"] = 0.0
+    bat_df["P_ch_max"] = 0.0
+    bat_df["E_total_Wh"] = 0.0
+
+    for idx, row in bat_df.iterrows():
+        chem = row["Composition"]
+        n = n_cells.get(chem, 0)
+
+        bat_df.at[idx, "n_cells"] = n
+        bat_df.at[idx, "P_dis_max"] = row["P_dis_cell_max"] * n
+        bat_df.at[idx, "P_ch_max"] = row["P_ch_cell_max"] * n
+        bat_df.at[idx, "E_total_Wh"] = row["E_cell_Wh"] * n
+
+    return bat_df
+
+
+def dispatch_battery(df, bat_df, dt, eff=0.9):
+    """
+    Dispatch battery with round-trip efficiency (eff).
+    eff: charging/discharging efficiency (0 < eff <= 1), default 0.9 (90%)
+    """
+    P_batt = {row["Composition"]: np.zeros(len(df)) for _, row in bat_df.iterrows()}
+    SOC_hist = {row["Composition"]: np.zeros(len(df)) for _, row in bat_df.iterrows()}
+
+    SOC = {
+        row["Composition"]: 0.5 * row["E_total_Wh"] / 1000
+        for _, row in bat_df.iterrows()
+    }
+
+    P_grid = np.zeros(len(df))
+
+    for t in range(len(df)):
+        surplus = (
+            df["P_pv_inst_kW"].iloc[t]
+            - df["P_load_inst_kW"].iloc[t]
+        )
+
+        for _, row in bat_df.iterrows():
+            chem = row["Composition"]
+            if row["n_cells"] == 0:
+                continue
+
+            P_ch_max = row["P_ch_max"] / 1000     # kW
+            P_dis_max = row["P_dis_max"] / 1000   # kW
+            E_tot = row["E_total_Wh"] / 1000      # kWh
+
+            if surplus > 0:
+                # Charging: account for efficiency loss (need more input to store 1 kWh)
+                P = min(surplus, P_ch_max, (E_tot - SOC[chem]) / (dt * eff))
+                SOC[chem] += P * dt * eff
+            else:
+                # Discharging: only a fraction of battery energy is delivered to load
+                P = max(surplus, -P_dis_max, -SOC[chem] * eff / dt)
+                SOC[chem] += P * dt / eff if eff > 0 else 0
+
+            SOC_hist[chem][t] = SOC[chem]
+            P_batt[chem][t] = P
+            surplus -= P
+
+        P_grid[t] = surplus
+        
+    for chem, soc in SOC_hist.items():
+        if bat_df.loc[bat_df["Composition"] == chem, "n_cells"].values[0] > 0:
+            print(f"{chem}: MAX SOC(%) = {np.max(soc)/(bat_df.loc[bat_df['Composition'] == chem, 'E_total_Wh'].values[0]/1000)*100:.2f}%, MIN SOC(%) = {np.min(soc)/(bat_df.loc[bat_df['Composition'] == chem, 'E_total_Wh'].values[0]/1000)*100:.2f}%")
+
+    P_batt_all = np.sum(list(P_batt.values()), axis=0)
+    return P_batt, P_grid, P_batt_all, SOC_hist
+
+
+
+
+def degradation_increment(P, dt, row, alpha):
+    """
+    Compute damage increment and C-rate for a single step.
+    Guards against invalid inputs (NaN P, zero/NaN capacities) to avoid RuntimeWarnings.
+    """
+    n = row["n_cells"]
+    E_cell = row.get("E_cell_Wh", np.nan)
+    E_tot = row.get("E_total_Wh", np.nan)
+
+    # Skip if any parameter is invalid
+    if (
+        n is None or n == 0 or
+        not np.isfinite(E_cell) or E_cell <= 0 or
+        not np.isfinite(E_tot) or E_tot <= 0 or
+        not np.isfinite(P) or
+        dt is None or dt <= 0
+    ):
+        return 0.0, 0.0
+
+    C_rate = abs(P * 1000.0) / (n * E_cell)
+
+    d_cycle = abs(P * dt * 1000.0) / (2.0 * E_tot)
+
+    damage = (C_rate ** alpha) * d_cycle
+
+    return damage, C_rate
+
+def compute_damage(P_batt, bat_df, dt, alpha_dict):
+    damage = {chem: 0.0 for chem in P_batt.keys()}
+    c_rate_mean = {chem: 0.0 for chem in P_batt.keys()}
+    c_rate_mean_on = {chem: 0.0 for chem in P_batt.keys()}
+    c_rate_max = {chem: 0.0 for chem in P_batt.keys()}
+    cycles = {chem: 0.0 for chem in P_batt.keys()}
+
+    for idx, row in bat_df.iterrows():
+        chem = row["Composition"]
+        alpha = alpha_dict.get(chem, 2.0)
+        c_rate_acc = 0.0
+        cycle_acc = 0.0
+
+        valid_c_rates = 0
+        for P in P_batt[chem]:
+            damage_increment, c_rate = degradation_increment(P, dt, row, alpha)
+            damage[chem] += damage_increment
+            # Accumulate only if valid
+            if np.isfinite(c_rate) and c_rate > 0:
+                c_rate_acc += c_rate
+                valid_c_rates += 1
+                if c_rate > c_rate_max[chem]:
+                    c_rate_max[chem] = c_rate
+            # Count cycles: sum absolute energy throughput divided by 2*E_total (only if valid)
+            if (
+                np.isfinite(P) and P != 0 and
+                np.isfinite(row["E_total_Wh"]) and row["E_total_Wh"] > 0
+            ):
+                cycle_acc += abs(P * dt * 1000.0) / (2.0 * row["E_total_Wh"]) 
+
+        if valid_c_rates > 0:
+            c_rate_mean[chem] = c_rate_acc / valid_c_rates
+        else:
+            c_rate_mean[chem] = 0.0
+
+        on_cycles = np.sum(np.abs(P_batt[chem]) > 0)
+        if on_cycles > 0:
+            c_rate_mean_on[chem] = c_rate_acc / on_cycles
+        else:
+            c_rate_mean_on[chem] = 0.0
+
+        cycles[chem] = cycle_acc
+
+    return damage, c_rate_mean, c_rate_mean_on, c_rate_max, cycles
+
+
+# %% Carregar dados das células
+cells_df = load_cell_data("cells.json")
+
+# %% carregar dados de energia
+df = load_energy_data_fast_regulation("../data/Fast-Regulation-Data.csv")
+dt = 1/3600  # intervalo de tempo em horas 
+
+
+# %% plot storage charge and discharge
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10, 5))
+plt.plot(df["seconds"], df["c_rate_normalize"], label="C-rate Normalized", color='blue')
+plt.xlabel("Time (seconds)")
+plt.ylabel("C-rate Normalized")
+plt.title("Battery C-rate Normalized Over Time")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# %% Configuração da bateria e simulação
+bat_energy_kWh = 8 # Energia total da bateria em kWh
+lfp_cell = cells_df[cells_df["Composition"] == "LFP"].iloc[0]
+nmc_cell = cells_df[cells_df["Composition"] == "NMC"].iloc[0]
+n_cells_lfp = int((bat_energy_kWh*1000/2) / lfp_cell["E_cell_Wh"])
+n_cells_nmc = int((bat_energy_kWh*1000/2) / nmc_cell["E_cell_Wh"])
+
+# Definir número de células inicial por química
+n_cells = {"LFP": n_cells_lfp, "NMC": 0 , "LTO": 0, "Sodium": 0}
+
+print("Número de células por química:")
+for chem, n in n_cells.items():
+    print(f"{chem}: {n} células")
+
+#Química	α típico	Comentário
+# LFP	    1.3 – 1.7	Muito robusta, degradação lenta mesmo em picos moderados
+# NMC	    2.0 – 2.5	Mais energética, degradação aumenta rápido com potência
+# LTO	    1.0 – 1.2	Extremamente robusta, praticamente insensível a C-rate
+# Sodium	1.5 – 2.0	Depende da química exata, média entre LFP e NMC
+
+# Formula de degradation
+# 
+
+alpha = {"LFP": 1.5, "NMC": 2.3, "LTO": 1.1, "Sodium": 1.7}
+
+# -----------------------------
+# %% Modelo
+# -----------------------------
+bat_df = get_battery_parameters(n_cells, cells_df)
+c_rate = 1.0  # C-rate de referência para potência nominal
+df["P_load_inst_kW"] = df["c_rate_normalize"] * (bat_energy_kWh)*c_rate  # Potência de carga/descarga da bateria em kW
+
+df_cut = df.copy()
+df_cut["P_pv_inst_kW"] = 0.0  # Sem PV neste cenário
+P_batt, P_grid, P_batt_all, SOC_hist = dispatch_battery(df_cut, bat_df, dt)
+
+# %% Plot SOCs
+
+plt.figure(figsize=(12, 5))
+for chem, soc in SOC_hist.items():
+    if bat_df.loc[bat_df["Composition"] == chem, "n_cells"].values[0] > 0:
+        plt.plot(
+            df_cut["seconds"],
+            soc,
+            label=f"SOC {chem}"
+        )
+
+plt.xlabel("Time (seconds)")
+plt.ylabel("State of Charge (kWh)")
+plt.title("Battery SOC over Time per Chemistry")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+
+# %% Plot SOCs %
+
+plt.figure(figsize=(12, 5))
+for chem, soc in SOC_hist.items():
+    if bat_df.loc[bat_df["Composition"] == chem, "n_cells"].values[0] > 0:
+        plt.plot(
+            df_cut["seconds"],
+            soc/(bat_df.loc[bat_df["Composition"] == chem, "E_total_Wh"].values[0]/1000)*100,
+            label=f"SOC {chem}"
+        )
+plt.xlabel("Time (seconds)")
+plt.ylabel("State of Charge (%)")
+plt.title("Battery SOC over Time per Chemistry")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+
+
+# %% Plot poweres
+plt.figure(figsize=(10, 5))
+plt.plot(df_cut["seconds"], P_grid , label="Grid Power (kW)", color='purple')
+plt.plot(df_cut["seconds"], P_batt_all , label="Battery Power (kW)", color='blue', alpha=0.5)
+plt.plot(df_cut["seconds"], df_cut["P_pv_inst_kW"], label="PV Power (kW)", color='orange', alpha=0.5)
+plt.plot(df_cut["seconds"], df_cut["P_load_inst_kW"], label="Load Power (kW)", color='red', alpha=0.5)
+plt.xlabel("Time (seconds)")
+plt.ylabel("Power (kW)")
+plt.title("Grid Power Over Time")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# Check calculate
+zero=P_grid + P_batt_all + df_cut["P_pv_inst_kW"] - df_cut["P_load_inst_kW"]
+print(f"Power balance check (should be all True): {np.all(zero)}")
+
+
+damage, c_rate_mean, c_rate_mean_on, c_rate_max, cycles = compute_damage(P_batt, bat_df, dt, alpha)
+
+for idx, row in bat_df.iterrows():
+    chem = row["Composition"]
+    life_fraction = damage[chem] / row["Cycles"]
+    lifetime_years = 1 / life_fraction if life_fraction > 0 else float('inf')
+    print(f"{chem}: Lifetime equivalente: {lifetime_years:.1f} anos, Fração de vida consumida: {life_fraction:.2%}")
+    print(f"  C-rate médio: {c_rate_mean[chem]:.2f}, C-rate médio ligado: {c_rate_mean_on[chem]:.2f}, C-rate máximo: {c_rate_max[chem]:.2f}")
+    print(f"  Ciclos totais: {cycles[chem]:.1f}, Ciclos por ano (assumindo 1 ano): {cycles[chem]/(len(df_cut)*dt/8760):.1f}")
+
+
+
+
+# %% Simulação para cada química individualmente
+bat_energy_kWh = 50  # Energia total da bateria em kWh
+c_rate = 1  # C-rate para normalização
+df_cut = df.copy()
+df_cut["P_load_inst_kW"] = df_cut["c_rate_normalize"] * (bat_energy_kWh) * c_rate
+df_cut["P_pv_inst_kW"] = 0.0  # Sem PV neste cenário
+
+plt.figure(figsize=(10, 5))
+plt.plot(df_cut["seconds"], df_cut["P_load_inst_kW"], label="Load Power (kW)", color='red', alpha=0.5)
+plt.xlabel("Time (seconds)")
+plt.ylabel("Power (kW)")
+plt.title("Load Power Over Time for Battery")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+chemistries = ["LFP", "NMC", "LTO", "Sodium"]
+
+print("\n--- Simulação de lifetime para cada química com 5kWh ---")
+for chem in chemistries:
+    print("\n")
+    print(f"--- Resultados para química: {chem} ---")
+    n_cells = {c: 0 for c in chemistries}
+    cell_row = cells_df[cells_df["Composition"] == chem].iloc[0]
+    n_cells[chem] = int((bat_energy_kWh * 1000) / cell_row["E_cell_Wh"])
+    print(f"Número de células para {chem}: {n_cells[chem]}")
+    bat_df = get_battery_parameters(n_cells, cells_df)
+    P_batt, P_grid, P_batt_all, SOC_hist = dispatch_battery(df_cut, bat_df, dt)
+
+    plt.figure(figsize=(12, 8))
+
+    # Plot 1: Battery Power
+    plt.subplot(2, 1, 1)
+    plt.plot(df_cut["seconds"], P_batt[chem], label=f"Battery Power ({chem})", color='blue')
+    plt.plot(df_cut["seconds"], P_grid, label="Grid Power", color='purple', alpha=0.5)
+    plt.plot(df_cut["seconds"], P_batt_all, label="Total Battery Power", color='green', alpha=0.5)
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Power (kW)")
+    plt.title(f"Battery Power over Time for {chem}")
+    plt.legend()
+    plt.grid()
+
+    # Plot 2: SOC (%)
+    plt.subplot(2, 1, 2)
+    soc = SOC_hist[chem]
+    soc_percent = soc / (bat_df.loc[bat_df["Composition"] == chem, "E_total_Wh"].values[0] / 1000) * 100
+    plt.plot(df_cut["seconds"], soc_percent, label=f"SOC {chem} (%)", color='orange')
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("State of Charge (%)")
+    plt.title(f"State of Charge over Time for {chem}")
+    plt.legend()
+    plt.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+
+    damage, c_rate_mean, c_rate_mean_on, c_rate_max, cycles = compute_damage(P_batt, bat_df, dt, alpha)
+    row = bat_df[bat_df["Composition"] == chem].iloc[0]
+    life_fraction = damage[chem] / row["Cycles"]
+    lifetime_years = 1 / life_fraction if life_fraction > 0 else float('inf')
+    print(f"{chem}: Lifetime equivalente: {lifetime_years:.1f} anos, Fração de vida consumida: {life_fraction:.2%}")
+    print(f"  C-rate médio: {c_rate_mean[chem]:.2f}, C-rate médio ligado: {c_rate_mean_on[chem]:.2f}, C-rate máximo: {c_rate_max[chem]:.2f}")
+    print(f"  Ciclos totais: {cycles[chem]:.1f}, Ciclos por ano (assumindo 1 ano): {cycles[chem]/(len(df_cut)*dt/8760):.1f}")
+
+# %% Problema de otimização de dimensionamento
