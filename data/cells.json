@@ -23,6 +23,7 @@
         "VolumeEnergyDensity": 213.6,
         "PowerEnergyDensity": 114.7,
         "Cycles": 7000,
+        "DoD_cycles": 1,
         "Price": 90,
         "OriginCountry": "China",
         "Connection": "Solder"
@@ -50,7 +51,8 @@
         "DistanceBetweenTwoTabs": 0,
         "VolumeEnergyDensity": 538.6,
         "PowerEnergyDensity": 233.3,
-        "Cycles": 2000,
+        "Cycles": 1500,
+        "DoD_cycles": 1,
         "Price": 90,
         "OriginCountry": "China",
         "Connection": "L"
@@ -79,6 +81,7 @@
         "VolumeEnergyDensity": 155.1,
         "PowerEnergyDensity": 87.3,
         "Cycles": 10000,
+        "DoD_cycles": 0.8,
         "Price": 450,
         "OriginCountry": "China",
         "Connection": "L"
@@ -107,6 +110,7 @@
         "VolumeEnergyDensity": 226.4,
         "PowerEnergyDensity": 118.8,
         "Cycles": 3000,
+        "DoD_cycles": 1,
         "Price": 60,
         "OriginCountry": "China",
         "Connection": "Solder"
