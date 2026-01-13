@@ -250,16 +250,16 @@ def compute_damage_paper(P_batt, bat_df, dt, SOC_P_hist, df):
             "psi": 3660
         },
         "LTO": {
-            "xi": 1,
-            "gamma1": 1,
-            "gamma2": 1,
-            "psi": 5000
+            "xi": 0.6,
+            "gamma1": 0.62,
+            "gamma2": 1.09,
+            "psi": 3660
         },
         "Sodium": {
-            "xi": 3.0,
-            "gamma1": 1,
-            "gamma2": 1.2,
-            "psi": 3500
+            "xi": 0.8,
+            "gamma1": 0.8,
+            "gamma2": 2.34,
+            "psi": 3700
         }
     }
 
