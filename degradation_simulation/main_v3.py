@@ -104,35 +104,26 @@ def block_E1_DoD_Crate(SoC, P_batt, dt, E_nom_Wh):
 
 
     DoD = []
+    d_soc =[]
     C_rate_dis = []
     C_rate_ch = []
     Init_Cycle = []
     End_Cycle = []
 
     # Inicialização (Step 1)
-    a = 0
-
-    DoD.append(1 - SoC[0])
-    # delta soc entre SOC
-    dsoc = SoC[1] - SoC[0]
-    C0 = abs(P_batt[0] * 1000) / E_nom_Wh  # C-rate inicial [1/h]
-    if dsoc < 0:  # descarga
-        C_rate_dis.append(C0)
-        C_rate_ch.append(0.0)
-    else:              # carga
-        C_rate_ch.append(C0)
-        C_rate_dis.append(0.0)
-
-    Init_Cycle.append(0)
-    End_Cycle.append(0)
-
-    dsoc_prev = dsoc
+    dsoc_prev = 0
     change_detected = False
 
     for k in range(0, len(SoC)-1):
         dsoc = SoC[k] - SoC[k + 1]
+        d_soc.append(dsoc)
 
         if dsoc == 0:
+            continue
+
+        if dsoc_prev == 0: # Primeira iteração
+            dsoc_prev = dsoc
+            a = k
             continue
 
         # Detecta transição (charge ↔ discharge), guarda ate aqui
@@ -155,10 +146,6 @@ def block_E1_DoD_Crate(SoC, P_batt, dt, E_nom_Wh):
             C_rate_mean_ch = np.mean(np.abs(P_batt_segment[P_batt_segment > 0]) * 1000 / E_nom_Wh)
             C_rate_mean_dis = np.mean(np.abs(P_batt_segment[P_batt_segment < 0]) * 1000 / E_nom_Wh)
 
-            if np.sum(np.abs(P_batt[a+1:b+1])>6) > 0:
-                print(f"Debug: Cycle from {a} to {b}, P_batt: Max: {np.max(P_batt[a+1:b+1])} Min: {np.min(P_batt[a+1:b+1])}, C_rate_mean_ch: {C_rate_mean_ch}, C_rate_mean_dis: {C_rate_mean_dis}, Cycle: {len(DoD)-1}")
-
-           
             C_rate_ch.append(C_rate_mean_ch)
             C_rate_dis.append(C_rate_mean_dis)
            
@@ -166,10 +153,7 @@ def block_E1_DoD_Crate(SoC, P_batt, dt, E_nom_Wh):
             End_Cycle.append(b)
 
             a = b 
-
             dsoc_prev = dsoc
-
-
 
     print(f"Total cycles identified: {len(DoD)}")
     print(f"DoD samples: Min = {np.min(DoD):.10f}, Max = {np.max(DoD):.4f}, Mean = {np.mean(DoD):.4f}")
